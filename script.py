@@ -113,4 +113,4 @@ for idx, row in tqdm(hex_gdf.iterrows(), total=len(hex_gdf), desc="Preparing CSV
 # Save to CSV
 df = pd.DataFrame(csv_data)
 df.to_csv("hexagones_20_villes_france_coordinates.csv", index=False)
-print("CSV généré : hexagones_20_villes_france_coordinates.csv")
+print("CSV généré : hexagones_20_villes_france_coordinates.csv") 
