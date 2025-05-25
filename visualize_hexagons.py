@@ -1,17 +1,29 @@
 import folium
 import pandas as pd
-import geopandas as gpd
-from shapely.geometry import Polygon
-import ast
+from folium.plugins import MarkerCluster
+import branca.colormap as cm
 
 def create_map():
     # Read the CSV file
+    print("Reading CSV file...")
     df = pd.read_csv('hexagones_20_villes_france_coordinates.csv')
     
     # Create a base map centered on France
     m = folium.Map(location=[46.603354, 1.888334], zoom_start=6)
     
-    # Group the data by the point identifier (to group hexagon points together)
+    # Create a color map for cities
+    cities = df['point'].str.split('_').str[1].unique()
+    colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'lightred', 'beige', 'darkblue', 'darkgreen', 
+              'cadetblue', 'darkpurple', 'pink', 'lightblue', 'lightgreen', 'gray', 'black', 'lightgray', 'darkred', 'darkblue']
+    city_colors = dict(zip(cities, colors))
+    
+    # Create feature groups for each city
+    city_groups = {}
+    for city in cities:
+        city_groups[city] = folium.FeatureGroup(name=city)
+    
+    print("Processing hexagons...")
+    # Group the data by the point identifier
     current_group = None
     hex_coords = []
     
@@ -33,23 +45,23 @@ def create_map():
                 # Create polygon
                 hex_poly = folium.Polygon(
                     locations=hex_coords[:-1],  # Exclude center point
-                    color='blue',
+                    color=city_colors[city],
                     weight=1,
                     fill=True,
-                    fill_color='blue',
+                    fill_color=city_colors[city],
                     fill_opacity=0.2,
                     popup=f'City: {city}<br>Group: {group_num}'
                 )
-                hex_poly.add_to(m)
+                hex_poly.add_to(city_groups[city])
                 
                 # Add center point
                 folium.CircleMarker(
                     location=hex_coords[-1],
-                    radius=3,
-                    color='red',
+                    radius=2,
+                    color=city_colors[city],
                     fill=True,
                     popup=f'Center - City: {city}<br>Group: {group_num}'
-                ).add_to(m)
+                ).add_to(city_groups[city])
             
             # Start new group
             current_group = group_num
@@ -62,26 +74,38 @@ def create_map():
     if len(hex_coords) == 7:
         hex_poly = folium.Polygon(
             locations=hex_coords[:-1],
-            color='blue',
+            color=city_colors[city],
             weight=1,
             fill=True,
-            fill_color='blue',
+            fill_color=city_colors[city],
             fill_opacity=0.2,
             popup=f'City: {city}<br>Group: {group_num}'
         )
-        hex_poly.add_to(m)
+        hex_poly.add_to(city_groups[city])
         
         folium.CircleMarker(
             location=hex_coords[-1],
-            radius=3,
-            color='red',
+            radius=2,
+            color=city_colors[city],
             fill=True,
             popup=f'Center - City: {city}<br>Group: {group_num}'
-        ).add_to(m)
+        ).add_to(city_groups[city])
     
-    # Add a layer control
+    # Add all city groups to the map
+    for city_group in city_groups.values():
+        city_group.add_to(m)
+    
+    # Add layer control
     folium.LayerControl().add_to(m)
     
+    # Add minimap
+    minimap = folium.plugins.MiniMap()
+    m.add_child(minimap)
+    
+    # Add fullscreen option
+    folium.plugins.Fullscreen().add_to(m)
+    
+    print("Saving map...")
     # Save the map
     m.save('france_hexagons_map.html')
     print("Map generated: france_hexagons_map.html")
