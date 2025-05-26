@@ -1,1 +1,7 @@
- 
+geopandas
+shapely
+numpy
+pandas
+pyproj
+tqdm
+folium 
