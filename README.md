@@ -51,3 +51,4 @@ The script generates a CSV file (`hexagones_20_villes_france_coordinates.csv`) c
 ## License
 
 [Your chosen license] # France-mapped-with-H3-Uber-s-Hexagonal
+# France-mapped-with-H3-Uber-s-Hexagonal
