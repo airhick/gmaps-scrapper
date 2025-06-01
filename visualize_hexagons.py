@@ -1,6 +1,5 @@
 import folium
 import pandas as pd
-import json
 from folium.plugins import MarkerCluster
 import webbrowser
 import os
@@ -25,11 +24,6 @@ def create_hexagon_map(csv_file):
     # Create a marker cluster for better performance
     marker_cluster = MarkerCluster().add_to(m)
     
-    # Group the data by city
-    cities = df['point'].str.split('_').str[1].unique()
-    print(f"\nVilles trouvées : {len(cities)}")
-    print(cities)
-    
     # Define colors for different cities
     colors = [
         'red', 'blue', 'green', 'purple', 'orange', 'darkred',
@@ -38,54 +32,23 @@ def create_hexagon_map(csv_file):
         'black', 'lightgray', 'darkorange', 'lightpurple'
     ]
     
-    hexagon_count = 0
-    # Process each city
-    for city_idx, city in enumerate(cities):
-        city_data = df[df['point'].str.contains(city)]
-        color = colors[city_idx % len(colors)]
-        
-        # Group by hexagon number
-        hex_groups = city_data['point'].str.split('_').str[0].unique()
-        print(f"\nTraitement de {city} : {len(hex_groups)} hexagones trouvés")
-        
-        for hex_num in hex_groups:
-            hex_data = city_data[city_data['point'].str.startswith(f"{hex_num}_{city}")]
-            
-            try:
-                # Get center coordinates
-                center_coords = hex_data[hex_data['point'].str.contains('center')]['coordinates'].iloc[0]
-                center_lon, center_lat = map(float, center_coords.split(','))
-                
-                # Get vertices coordinates
-                vertices = hex_data[hex_data['point'].str.contains('vertex')]['coordinates'].tolist()
-                # Inverser chaque paire pour Folium : [lat, lon]
-                vertices_coords = [[float(coord.split(',')[1]), float(coord.split(',')[0])] for coord in vertices]
-                
-                # Create hexagon polygon
-                folium.Polygon(
-                    locations=vertices_coords,
-                    color=color,
-                    weight=2,
-                    fill=True,
-                    fill_color=color,
-                    fill_opacity=0.2,
-                    popup=f"{city} - Hexagon {hex_num}"
-                ).add_to(m)
-                
-                # Add center marker (inverser aussi)
-                folium.CircleMarker(
-                    location=[center_lat, center_lon],
-                    radius=3,
-                    color=color,
-                    fill=True,
-                    popup=f"{city} - Center {hex_num}"
-                ).add_to(marker_cluster)
-                
-                hexagon_count += 1
-            except Exception as e:
-                print(f"Erreur lors du traitement de l'hexagone {hex_num} de {city} : {str(e)}")
+    # Group points by city
+    df['city'] = df['point'].str.split('_').str[1]
     
-    print(f"\nNombre total d'hexagones créés : {hexagon_count}")
+    # Plot each point
+    for city_idx, city in enumerate(df['city'].unique()):
+        city_data = df[df['city'] == city]
+        color = colors[city_idx % len(colors)]
+        for _, row in city_data.iterrows():
+            lon, lat = map(float, row['coordinates'].split(','))
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=3,
+                color=color,
+                fill=True,
+                fill_opacity=0.7,
+                popup=f"{row['point']}<br>({lat}, {lon})"
+            ).add_to(marker_cluster)
     
     # Add layer control
     folium.LayerControl().add_to(m)

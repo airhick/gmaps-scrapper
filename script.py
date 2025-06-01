@@ -104,6 +104,7 @@ hex_gdf = hex_gdf.to_crs(epsg=4326)
 # Export CSV
 csv_data = []
 hexagon_counter = {}
+seen_coordinates = set()  # Pour suivre les coordonnées déjà vues
 
 for idx, row in tqdm(hex_gdf.iterrows(), total=len(hex_gdf), desc="Preparing CSV data"):
     city = row["city"]
@@ -115,22 +116,38 @@ for idx, row in tqdm(hex_gdf.iterrows(), total=len(hex_gdf), desc="Preparing CSV
         hexagon_counter[city] += 1
     group_num = hexagon_counter[city]
     
-    # Centre
-    center_lon, center_lat = row["center"].x, row["center"].y
-    csv_data.append({
-        "point": f"{group_num}_{city}_center",
-        "coordinates": f"{center_lon},{center_lat}"
-    })
+    # Centre (calculé à partir du centroïde du polygone reprojeté)
+    centroid = row["polygon"].centroid
+    center_lon, center_lat = centroid.x, centroid.y
+    # Arrondir les coordonnées à 6 décimales (environ 11 cm de précision)
+    center_lon = round(center_lon, 6)
+    center_lat = round(center_lat, 6)
+    center_coords = f"{center_lon},{center_lat}"
+    
+    if center_coords not in seen_coordinates:
+        seen_coordinates.add(center_coords)
+        csv_data.append({
+            "point": f"{group_num}_{city}_center",
+            "coordinates": center_coords
+        })
     
     # Sommets
     vertices = list(row["polygon"].exterior.coords)
     for i, (lon, lat) in enumerate(vertices[:-1]):  # On saute le dernier car il est identique au premier
-        csv_data.append({
-            "point": f"{group_num}_{city}_vertex{i+1}",
-            "coordinates": f"{lon},{lat}"
-        })
+        # Arrondir les coordonnées à 6 décimales
+        lon = round(lon, 6)
+        lat = round(lat, 6)
+        vertex_coords = f"{lon},{lat}"
+        
+        if vertex_coords not in seen_coordinates:
+            seen_coordinates.add(vertex_coords)
+            csv_data.append({
+                "point": f"{group_num}_{city}_vertex{i+1}",
+                "coordinates": vertex_coords
+            })
 
 # Sauvegarde CSV
 df = pd.DataFrame(csv_data)
 df.to_csv("hexagones_20_villes_france_coordinates.csv", index=False)
-print("CSV généré : hexagones_20_villes_france_coordinates.csv") 
+print("CSV généré : hexagones_20_villes_france_coordinates.csv")
+print(f"Nombre total de points uniques : {len(csv_data)}") 
